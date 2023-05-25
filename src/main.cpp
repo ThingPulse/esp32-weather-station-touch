@@ -9,6 +9,10 @@
 #include "fonts/open-sans.h"
 #include "GfxUi.h"
 
+#include <JsonListener.h>
+#include <OpenWeatherMapCurrent.h>
+#include <OpenWeatherMapForecast.h>
+
 #include "connectivity.h"
 #include "display.h"
 #include "persistence.h"
@@ -28,18 +32,25 @@ GfxUi ui = GfxUi(&tft, &ofr);
 int lastMinute = -1;
 
 // time management variables
-int timeSyncIntervalMillis = TIME_SYNC_INTERVAL_HOURS * 3600 * 1000;
+int updateIntervalMillis = UPDATE_INTERVAL_MINUTES * 60 * 1000;
 unsigned long lastTimeSyncMillis = 0;
+unsigned long lastUpdateMillis = 0;
+
+OpenWeatherMapCurrentData currentWeather;
+OpenWeatherMapForecastData forecasts[MAX_FORECASTS];
 
 
 
 // ----------------------------------------------------------------------------
 // Function prototypes (declarations)
 // ----------------------------------------------------------------------------
+void drawProgress(const char *text, int8_t percentage);
 void initJpegDecoder();
 void initOpenFontRender();
 bool pushImageToTft(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap);
 void syncTime();
+void update();
+void updateData();
 
 
 
@@ -60,40 +71,16 @@ void setup(void) {
 
   initFileSystem();
   initOpenFontRender();
-
-
-  ui.drawLogo();
-
-  ofr.setFontSize(16);
-  ofr.cdrawString(APP_NAME, tft.width() / 2, tft.height() - 50);
-  ofr.cdrawString(VERSION, tft.width() / 2, tft.height() - 30);
-
-  ofr.setFontSize(24);
-  int pbWidth = tft.width() - 100;
-  int pbX = (tft.width() - pbWidth)/2;
-  int pbY = 260;
-  int progressTextY = 210;
-
-  ofr.cdrawString("Starting WiFi...", tft.width() / 2, progressTextY);
-  ui.drawProgressBar(pbX, pbY, pbWidth, 15, 20, TFT_WHITE, TFT_TP_BLUE);
-  startWiFi();
-
-  tft.fillRect(0, progressTextY, tft.width(), 40, TFT_BLACK);
-  ofr.cdrawString("Synchronizing time...", tft.width() / 2, progressTextY);
-  ui.drawProgressBar(pbX, pbY, pbWidth, 15, 60, TFT_WHITE, TFT_TP_BLUE);
-  syncTime();
-
-  tft.fillRect(0, progressTextY, tft.width(), 40, TFT_BLACK);
-  ofr.cdrawString("Ready", tft.width() / 2, progressTextY);
-  ui.drawProgressBar(pbX, pbY, pbWidth, 15, 100, TFT_WHITE, TFT_TP_BLUE);
 }
 
 void loop(void) {
-  // re-sync time if
-  // - never (successfully) synced before OR
+  // update if
+  // - never (successfully) updated before OR
   // - last sync too far back
-  if (lastTimeSyncMillis == 0 || (millis() - lastTimeSyncMillis) > timeSyncIntervalMillis) {
-    syncTime();
+  if (lastTimeSyncMillis == 0 ||
+      lastUpdateMillis == 0 ||
+      (millis() - lastUpdateMillis) > updateIntervalMillis) {
+    update();
   }
 }
 
@@ -102,6 +89,18 @@ void loop(void) {
 // ----------------------------------------------------------------------------
 // Functions
 // ----------------------------------------------------------------------------
+
+void drawProgress(const char *text, int8_t percentage) {
+  ofr.setFontSize(24);
+  int pbWidth = tft.width() - 100;
+  int pbX = (tft.width() - pbWidth)/2;
+  int pbY = 260;
+  int progressTextY = 210;
+
+  tft.fillRect(0, progressTextY, tft.width(), 40, TFT_BLACK);
+  ofr.cdrawString(text, tft.width() / 2, progressTextY);
+  ui.drawProgressBar(pbX, pbY, pbWidth, 15, percentage, TFT_WHITE, TFT_TP_BLUE);
+}
 
 void initJpegDecoder() {
     // The JPEG image can be scaled by a factor of 1, 2, 4, or 8 (default: 0)
@@ -138,4 +137,46 @@ void syncTime() {
     setTimezone(TIMEZONE);
     log_i("Current local time: %s", getCurrentTimestamp(SYSTEM_TIMESTAMP_FORMAT).c_str());
   }
+}
+
+void update() {
+  ui.drawLogo();
+
+  ofr.setFontSize(16);
+  ofr.cdrawString(APP_NAME, tft.width() / 2, tft.height() - 50);
+  ofr.cdrawString(VERSION, tft.width() / 2, tft.height() - 30);
+
+  drawProgress("Starting WiFi...", 10);
+  if (WiFi.status() != WL_CONNECTED) {
+    startWiFi();
+  }
+
+  drawProgress("Synchronizing time...", 30);
+  syncTime();
+
+  updateData();
+
+  drawProgress("Ready", 100);
+  lastUpdateMillis = millis();
+}
+
+void updateData() {
+  drawProgress("Updating weather...", 70);
+  OpenWeatherMapCurrent *currentWeatherClient = new OpenWeatherMapCurrent();
+  currentWeatherClient->setMetric(IS_METRIC);
+  currentWeatherClient->setLanguage(OPEN_WEATHER_MAP_LANGUAGE);
+  currentWeatherClient->updateCurrentById(&currentWeather, OPEN_WEATHER_MAP_API_KEY, OPEN_WEATHER_MAP_LOCATION_ID);
+  delete currentWeatherClient;
+  currentWeatherClient = nullptr;
+  log_i("Current weather in %s: %s, %.1fC°", currentWeather.cityName, currentWeather.description.c_str(), currentWeather.feelsLike);
+
+  drawProgress("Updating forecasts...", 90);
+  OpenWeatherMapForecast *forecastClient = new OpenWeatherMapForecast();
+  forecastClient->setMetric(IS_METRIC);
+  forecastClient->setLanguage(OPEN_WEATHER_MAP_LANGUAGE);
+  uint8_t allowedHours[] = {12, 0};
+  forecastClient->setAllowedHours(allowedHours, sizeof(allowedHours));
+  forecastClient->updateForecastsById(forecasts, OPEN_WEATHER_MAP_API_KEY, OPEN_WEATHER_MAP_LOCATION_ID, MAX_FORECASTS);
+  delete forecastClient;
+  forecastClient = nullptr;
 }
