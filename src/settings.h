@@ -13,16 +13,15 @@ const char *WIFI_PWD = "yourpassw0rd";
 // timezone Europe/Zurich as per https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
 #define TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"
 
-// format specifiers: https://cplusplus.com/reference/ctime/strftime/
-#define USER_DATE_FORMAT "%d.%m.%Y"
-#define USER_TIMESTAMP_FORMAT "%d.%m.%Y %H:%M:%S"
+// uncomment to get "08/23/2022 02:55:02 pm" instead of "23.08.2022 14:55:02"
+// #define DATE_TIME_FORMAT_US
 
 // values in metric or imperial system?
 bool IS_METRIC = true;
 
 // OpenWeatherMap Settings
 // Sign up here to get an API key: https://docs.thingpulse.com/how-tos/openweathermap-key/
-String OPEN_WEATHER_MAP_API_KEY = "";
+const String OPEN_WEATHER_MAP_API_KEY = "";
 
 /*
 Go to https://openweathermap.org/find?q= and search for a location. Go through the
@@ -30,8 +29,8 @@ result set and select the entry closest to the actual location you want to displ
 data for. It'll be a URL like https://openweathermap.org/city/2657896. The number
 at the end is what you assign to the constant below.
  */
-String OPEN_WEATHER_MAP_LOCATION_ID = "2657896";
-String DISPLAYED_LOCATION_NAME = "Zurich";
+const String OPEN_WEATHER_MAP_LOCATION_ID = "2657896";
+const String DISPLAYED_LOCATION_NAME = "Zurich";
 //String OPEN_WEATHER_MAP_LOCATION_ID = "3833367";
 //String DISPLAYED_LOCATION_NAME = "Ushuaia";
 //String OPEN_WEATHER_MAP_LOCATION_ID = "2147714";
@@ -54,6 +53,15 @@ const String OPEN_WEATHER_MAP_LANGUAGE = "en";
 // ****************************************************************************
 // System settings - do not modify unless you understand what you are doing!
 // ****************************************************************************
+typedef struct RectangleDef {
+  int x;
+  int y;
+  int width;
+  int height;
+} RectangleDef;
+
+RectangleDef timeSpritePos = {0, 30, 320, 55};
+
 // 2: portrait, on/off switch right side -> 0/0 top left
 // 3: landscape, on/off switch at the top -> 0/0 top left
 #define TFT_ROTATION 2
@@ -72,6 +80,21 @@ const String OPEN_WEATHER_MAP_LANGUAGE = "en";
 
 // the medium blue in the TP logo is 0x0067B0 which converts to 0x0336 in 16bit RGB565
 #define TFT_TP_BLUE 0x0336
+
+// format specifiers: https://cplusplus.com/reference/ctime/strftime/
+#ifdef DATE_TIME_FORMAT_US
+  int timePosX = 29;
+  #define UI_DATE_FORMAT "%m/%d/%Y"
+  #define UI_TIME_FORMAT "%H:%M:%S %P"
+  #define UI_TIME_FORMAT_NO_SECONDS "%I:%M %P"
+  #define UI_TIMESTAMP_FORMAT (UI_DATE_FORMAT + " " + UI_TIME_FORMAT)
+#else
+  int timePosX = 68;
+  #define UI_DATE_FORMAT "%d.%m.%Y"
+  #define UI_TIME_FORMAT "%H:%M:%S"
+  #define UI_TIME_FORMAT_NO_SECONDS "%H:%M"
+  #define UI_TIMESTAMP_FORMAT (UI_DATE_FORMAT + " " + UI_TIME_FORMAT)
+#endif
 
 #define SYSTEM_TIMESTAMP_FORMAT "%Y-%m-%d %H:%M:%S"
 

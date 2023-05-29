@@ -27,6 +27,7 @@
 OpenFontRender ofr;
 FT6236 ts = FT6236(TFT_HEIGHT, TFT_WIDTH);
 TFT_eSPI tft = TFT_eSPI();
+TFT_eSprite timeSprite = TFT_eSprite(&tft);
 GfxUi ui = GfxUi(&tft, &ofr);
 
 int lastMinute = -1;
@@ -45,12 +46,13 @@ OpenWeatherMapForecastData forecasts[MAX_FORECASTS];
 // Function prototypes (declarations)
 // ----------------------------------------------------------------------------
 void drawProgress(const char *text, int8_t percentage);
+void drawTime();
 void initJpegDecoder();
 void initOpenFontRender();
 bool pushImageToTft(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap);
 void syncTime();
 void update();
-void updateData();
+void updateData(boolean updateProgressBar);
 
 
 
@@ -67,6 +69,7 @@ void setup(void) {
   initJpegDecoder();
   initTouchScreen(&ts);
   initTft(&tft);
+  timeSprite.createSprite(timeSpritePos.width, timeSpritePos.height);
   logDisplayDebugInfo(&tft);
 
   initFileSystem();
@@ -81,7 +84,10 @@ void loop(void) {
       lastUpdateMillis == 0 ||
       (millis() - lastUpdateMillis) > updateIntervalMillis) {
     update();
+  } else {
+    drawTime();
   }
+  delay(1000);
 }
 
 
@@ -100,6 +106,16 @@ void drawProgress(const char *text, int8_t percentage) {
   tft.fillRect(0, progressTextY, tft.width(), 40, TFT_BLACK);
   ofr.cdrawString(text, tft.width() / 2, progressTextY);
   ui.drawProgressBar(pbX, pbY, pbWidth, 15, percentage, TFT_WHITE, TFT_TP_BLUE);
+}
+
+void drawTime() {
+  timeSprite.fillSprite(TFT_BLACK);
+  ofr.setFontSize(48);
+  ofr.setDrawer(timeSprite);
+  ofr.drawString(getCurrentTimestamp(UI_TIME_FORMAT).c_str(), timePosX, 0);
+  timeSprite.pushSprite(timeSpritePos.x, timeSpritePos.y);
+  // set the drawer back since we temporarily changed it to the time sprite above
+  ofr.setDrawer(tft);
 }
 
 void initJpegDecoder() {
@@ -140,6 +156,7 @@ void syncTime() {
 }
 
 void update() {
+  tft.fillScreen(TFT_BLACK);
   ui.drawLogo();
 
   ofr.setFontSize(16);
@@ -154,14 +171,20 @@ void update() {
   drawProgress("Synchronizing time...", 30);
   syncTime();
 
-  updateData();
+  updateData(true);
 
   drawProgress("Ready", 100);
   lastUpdateMillis = millis();
+
+  tft.fillScreen(TFT_BLACK);
+
+  ofr.setFontSize(16);
+  ofr.cdrawString(String("Last weather update: " + getCurrentTimestamp(UI_TIME_FORMAT_NO_SECONDS)).c_str(), tft.width() / 2, 10);
+  drawTime();
 }
 
-void updateData() {
-  drawProgress("Updating weather...", 70);
+void updateData(boolean updateProgressBar) {
+  if(updateProgressBar) drawProgress("Updating weather...", 70);
   OpenWeatherMapCurrent *currentWeatherClient = new OpenWeatherMapCurrent();
   currentWeatherClient->setMetric(IS_METRIC);
   currentWeatherClient->setLanguage(OPEN_WEATHER_MAP_LANGUAGE);
@@ -170,7 +193,7 @@ void updateData() {
   currentWeatherClient = nullptr;
   log_i("Current weather in %s: %s, %.1fC°", currentWeather.cityName, currentWeather.description.c_str(), currentWeather.feelsLike);
 
-  drawProgress("Updating forecasts...", 90);
+  if(updateProgressBar) drawProgress("Updating forecast...", 90);
   OpenWeatherMapForecast *forecastClient = new OpenWeatherMapForecast();
   forecastClient->setMetric(IS_METRIC);
   forecastClient->setLanguage(OPEN_WEATHER_MAP_LANGUAGE);
