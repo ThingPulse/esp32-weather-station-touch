@@ -31,12 +31,12 @@ TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite timeSprite = TFT_eSprite(&tft);
 GfxUi ui = GfxUi(&tft, &ofr);
 
-int lastMinute = -1;
-
 // time management variables
 int updateIntervalMillis = UPDATE_INTERVAL_MINUTES * 60 * 1000;
 unsigned long lastTimeSyncMillis = 0;
 unsigned long lastUpdateMillis = 0;
+
+const int16_t centerWidth = tft.width() / 2;
 
 OpenWeatherMapCurrentData currentWeather;
 OpenWeatherMapForecastData forecasts[MAX_FORECASTS];
@@ -49,7 +49,7 @@ OpenWeatherMapForecastData forecasts[MAX_FORECASTS];
 void drawAstro();
 void drawCurrentWeather();
 void drawProgress(const char *text, int8_t percentage);
-void drawTime();
+void drawTimeAndDate();
 String getWeatherIconName(uint16_t id, bool today);
 void initJpegDecoder();
 void initOpenFontRender();
@@ -89,7 +89,7 @@ void loop(void) {
       (millis() - lastUpdateMillis) > updateIntervalMillis) {
     update();
   } else {
-    drawTime();
+    drawTimeAndDate();
   }
   delay(1000);
 }
@@ -126,10 +126,10 @@ void drawAstro() {
   // Moon icon
   int imageIndex = round(result.moon.age * NUMBER_OF_MOON_IMAGES / LUNAR_MONTH);
   if (imageIndex == NUMBER_OF_MOON_IMAGES) imageIndex = NUMBER_OF_MOON_IMAGES - 1;
-  ui.drawBmp("/moon/m-phase-" + String(imageIndex) + ".bmp", tft.width() / 2 - 37, 365);
+  ui.drawBmp("/moon/m-phase-" + String(imageIndex) + ".bmp", centerWidth - 37, 365);
 
   ofr.setFontSize(14);
-  ofr.cdrawString(MOON_PHASES[result.moon.phase.index].c_str(), tft.width() / 2, 455);
+  ofr.cdrawString(MOON_PHASES[result.moon.phase.index].c_str(), centerWidth, 455);
 
   log_i("Moon phase: %s, illumination: %f, age: %f -> image index: %d",
         result.moon.phase.name.c_str(), result.moon.illumination, result.moon.age, imageIndex);
@@ -146,22 +146,22 @@ void drawCurrentWeather() {
 
   // condition string
   ofr.setFontSize(24);
-  ofr.cdrawString(currentWeather.main.c_str(), tft.width() / 2, 95);
+  ofr.cdrawString(currentWeather.main.c_str(), centerWidth, 95);
 
   // temperature incl. symbol, slightly shifted to the right to find better balance due to the ° symbol
   ofr.setFontSize(48);
   text = String(currentWeather.temp, 1) + "°";
-  ofr.cdrawString(text.c_str(), (tft.width() / 2) + 10, 120);
+  ofr.cdrawString(text.c_str(), centerWidth + 10, 120);
 
   ofr.setFontSize(18);
 
   // humidity
   text = String(currentWeather.humidity) + " %";
-  ofr.cdrawString(text.c_str(), tft.width() / 2, 178);
+  ofr.cdrawString(text.c_str(), centerWidth, 178);
 
   // pressure
   text = String(currentWeather.pressure) + " hPa";
-  ofr.cdrawString(text.c_str(), tft.width() / 2, 200);
+  ofr.cdrawString(text.c_str(), centerWidth, 200);
 
   // wind rose icon
   int windAngleIndex = round(currentWeather.windDeg * 8 / 360);
@@ -184,7 +184,7 @@ void drawProgress(const char *text, int8_t percentage) {
   int progressTextY = 210;
 
   tft.fillRect(0, progressTextY, tft.width(), 40, TFT_BLACK);
-  ofr.cdrawString(text, tft.width() / 2, progressTextY);
+  ofr.cdrawString(text, centerWidth, progressTextY);
   ui.drawProgressBar(pbX, pbY, pbWidth, 15, percentage, TFT_WHITE, TFT_TP_BLUE);
 }
 
@@ -192,12 +192,24 @@ void drawSeparator(uint16_t y) {
   tft.drawFastHLine(10, y, tft.width() - 2 * 15, 0x4228);
 }
 
-void drawTime() {
+void drawTimeAndDate() {
   timeSprite.fillSprite(TFT_BLACK);
-  ofr.setFontSize(48);
   ofr.setDrawer(timeSprite);
-  ofr.drawString(getCurrentTimestamp(UI_TIME_FORMAT).c_str(), timePosX, 0);
+
+  // Date
+  ofr.setFontSize(16);
+  ofr.cdrawString(
+    String(WEEKDAYS[getCurrentWeekday()] + ", " + getCurrentTimestamp(UI_DATE_FORMAT)).c_str(),
+    centerWidth,
+    10
+  );
+
+  // Time
+  ofr.setFontSize(48);
+  // centering that string would look optically odd for 12h times -> manage pos manually
+  ofr.drawString(getCurrentTimestamp(UI_TIME_FORMAT).c_str(), timePosX, 30);
   timeSprite.pushSprite(timeSpritePos.x, timeSpritePos.y);
+
   // set the drawer back since we temporarily changed it to the time sprite above
   ofr.setDrawer(tft);
 }
@@ -279,8 +291,8 @@ void update() {
   ui.drawLogo();
 
   ofr.setFontSize(16);
-  ofr.cdrawString(APP_NAME, tft.width() / 2, tft.height() - 50);
-  ofr.cdrawString(VERSION, tft.width() / 2, tft.height() - 30);
+  ofr.cdrawString(APP_NAME, centerWidth, tft.height() - 50);
+  ofr.cdrawString(VERSION, centerWidth, tft.height() - 30);
 
   drawProgress("Starting WiFi...", 10);
   if (WiFi.status() != WL_CONNECTED) {
@@ -297,9 +309,7 @@ void update() {
 
   tft.fillScreen(TFT_BLACK);
 
-  ofr.setFontSize(16);
-  ofr.cdrawString(String("Last weather update: " + getCurrentTimestamp(UI_TIME_FORMAT_NO_SECONDS)).c_str(), tft.width() / 2, 10);
-  drawTime();
+  drawTimeAndDate();
   drawSeparator(90);
 
   drawCurrentWeather();

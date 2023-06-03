@@ -8,13 +8,13 @@
 
 char timestampBuffer[26];
 
-int getCurrentMinute() {
+uint8_t getCurrentWeekday() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
     log_e("Failed to obtain time.");
     return -1;
   }
-  return timeinfo.tm_min;
+  return timeinfo.tm_wday;
 }
 
 String getCurrentTimestamp(const char* format) {
