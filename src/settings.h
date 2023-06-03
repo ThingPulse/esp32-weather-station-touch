@@ -13,6 +13,8 @@ const char *WIFI_PWD = "yourpassw0rd";
 // timezone Europe/Zurich as per https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
 #define TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"
 
+#define UPDATE_INTERVAL_MINUTES 10
+
 // uncomment to get "08/23/2022 02:55:02 pm" instead of "23.08.2022 14:55:02"
 // #define DATE_TIME_FORMAT_US
 
@@ -37,16 +39,13 @@ const String DISPLAYED_LOCATION_NAME = "Zurich";
 //String DISPLAYED_LOCATION_NAME = "Sydney";
 //String OPEN_WEATHER_MAP_LOCATION_ID = "5879400";
 //String DISPLAYED_LOCATION_NAME = "Anchorage";
-/*
-Arabic -> ar, Bulgarian -> bg, Catalan -> ca, Czech -> cz, German -> de, Greek -> el,
-English -> en, Persian (Farsi) -> fa, Finnish -> fi, French -> fr, Galician -> gl,
-Croatian -> hr, Hungarian -> hu, Italian -> it, Japanese -> ja, Korean -> kr,
-Latvian -> la, Lithuanian -> lt, Macedonian -> mk, Dutch -> nl, Polish -> pl,
-Portuguese -> pt, Romanian -> ro, Russian -> ru, Swedish -> se, Slovak -> sk,
-Slovenian -> sl, Spanish -> es, Turkish -> tr, Ukrainian -> ua, Vietnamese -> vi,
-Chinese Simplified -> zh_cn, Chinese Traditional -> zh_tw.
-*/
+
+// Supported languages: https://openweathermap.org/current#multi
 const String OPEN_WEATHER_MAP_LANGUAGE = "en";
+
+const String SUN_MOON_LABEL[] = {"Sun", "Moon"};
+const String MOON_PHASES[] = {"New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
+                              "Full Moon", "Waning Gibbous", "Third quarter", "Waning Crescent"};
 
 
 
@@ -54,13 +53,19 @@ const String OPEN_WEATHER_MAP_LANGUAGE = "en";
 // System settings - do not modify unless you understand what you are doing!
 // ****************************************************************************
 typedef struct RectangleDef {
-  int x;
-  int y;
-  int width;
-  int height;
+  uint16_t x;
+  uint16_t y;
+  uint16_t width;
+  uint16_t height;
 } RectangleDef;
 
 RectangleDef timeSpritePos = {0, 30, 320, 55};
+
+const String WIND_ICON_NAMES[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+
+// average approximation for the actual length of the synodic month
+const double LUNAR_MONTH = 29.530588853;
+const uint8_t NUMBER_OF_MOON_IMAGES = 32;
 
 // 2: portrait, on/off switch right side -> 0/0 top left
 // 3: landscape, on/off switch at the top -> 0/0 top left
@@ -75,8 +80,6 @@ RectangleDef timeSpritePos = {0, 30, 320, 55};
 #define TOUCH_SCL 22
 // Initial LCD Backlight brightness
 #define TFT_LED_BRIGHTNESS 200
-
-#define UPDATE_INTERVAL_MINUTES 10
 
 // the medium blue in the TP logo is 0x0067B0 which converts to 0x0336 in 16bit RGB565
 #define TFT_TP_BLUE 0x0336

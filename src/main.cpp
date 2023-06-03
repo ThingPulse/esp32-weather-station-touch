@@ -12,6 +12,7 @@
 #include <JsonListener.h>
 #include <OpenWeatherMapCurrent.h>
 #include <OpenWeatherMapForecast.h>
+#include <SunMoonCalc.h>
 
 #include "connectivity.h"
 #include "display.h"
@@ -45,8 +46,11 @@ OpenWeatherMapForecastData forecasts[MAX_FORECASTS];
 // ----------------------------------------------------------------------------
 // Function prototypes (declarations)
 // ----------------------------------------------------------------------------
+void drawAstro();
+void drawCurrentWeather();
 void drawProgress(const char *text, int8_t percentage);
 void drawTime();
+String getWeatherIconName(uint16_t id, bool today);
 void initJpegDecoder();
 void initOpenFontRender();
 bool pushImageToTft(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap);
@@ -95,6 +99,82 @@ void loop(void) {
 // ----------------------------------------------------------------------------
 // Functions
 // ----------------------------------------------------------------------------
+void drawAstro() {
+  time_t tnow = time(nullptr);
+  struct tm *nowUtc = gmtime(&tnow);
+
+  SunMoonCalc smCalc = SunMoonCalc(mkgmtime(nowUtc), currentWeather.lat, currentWeather.lon);
+  const SunMoonCalc::Result result = smCalc.calculateSunAndMoonData();
+
+  ofr.setFontSize(24);
+  ofr.cdrawString(SUN_MOON_LABEL[0].c_str(), 60, 365);
+  ofr.cdrawString(SUN_MOON_LABEL[1].c_str(), tft.width() - 60, 365);
+
+  ofr.setFontSize(18);
+  // Sun
+  strftime(timestampBuffer, 26, UI_TIME_FORMAT_NO_SECONDS, localtime(&result.sun.rise));
+  ofr.cdrawString(timestampBuffer, 60, 400);
+  strftime(timestampBuffer, 26, UI_TIME_FORMAT_NO_SECONDS, localtime(&result.sun.set));
+  ofr.cdrawString(timestampBuffer, 60, 425);
+
+  // Moon
+  strftime(timestampBuffer, 26, UI_TIME_FORMAT_NO_SECONDS, localtime(&result.moon.rise));
+  ofr.cdrawString(timestampBuffer, tft.width() - 60, 400);
+  strftime(timestampBuffer, 26, UI_TIME_FORMAT_NO_SECONDS, localtime(&result.moon.set));
+  ofr.cdrawString(timestampBuffer, tft.width() - 60, 425);
+
+  // Moon icon
+  int imageIndex = round(result.moon.age * NUMBER_OF_MOON_IMAGES / LUNAR_MONTH);
+  if (imageIndex == NUMBER_OF_MOON_IMAGES) imageIndex = NUMBER_OF_MOON_IMAGES - 1;
+  ui.drawBmp("/moon/m-phase-" + String(imageIndex) + ".bmp", tft.width() / 2 - 37, 365);
+
+  ofr.setFontSize(14);
+  ofr.cdrawString(MOON_PHASES[result.moon.phase.index].c_str(), tft.width() / 2, 455);
+
+  log_i("Moon phase: %s, illumination: %f, age: %f -> image index: %d",
+        result.moon.phase.name.c_str(), result.moon.illumination, result.moon.age, imageIndex);
+}
+
+void drawCurrentWeather() {
+  // re-use variable throughout function
+  String text = "";
+
+  // icon
+  String weatherIcon = getWeatherIconName(currentWeather.weatherId, true);
+  ui.drawBmp("/weather/" + weatherIcon + ".bmp", 5, 125);
+  // tft.drawRect(5, 125, 100, 100, 0x4228);
+
+  // condition string
+  ofr.setFontSize(24);
+  ofr.cdrawString(currentWeather.main.c_str(), tft.width() / 2, 95);
+
+  // temperature incl. symbol, slightly shifted to the right to find better balance due to the ° symbol
+  ofr.setFontSize(48);
+  text = String(currentWeather.temp, 1) + "°";
+  ofr.cdrawString(text.c_str(), (tft.width() / 2) + 10, 120);
+
+  ofr.setFontSize(18);
+
+  // humidity
+  text = String(currentWeather.humidity) + " %";
+  ofr.cdrawString(text.c_str(), tft.width() / 2, 178);
+
+  // pressure
+  text = String(currentWeather.pressure) + " hPa";
+  ofr.cdrawString(text.c_str(), tft.width() / 2, 200);
+
+  // wind rose icon
+  int windAngleIndex = round(currentWeather.windDeg * 8 / 360);
+  if (windAngleIndex > 7) windAngleIndex = 0;
+  ui.drawBmp("/wind/" + WIND_ICON_NAMES[windAngleIndex] + ".bmp", tft.width() - 80, 125);
+  // tft.drawRect(tft.width() - 80, 125, 75, 75, 0x4228);
+
+  // wind speed
+  text = String(currentWeather.windSpeed, 0);
+  if (IS_METRIC) text += " m/s";
+  else text += " mph";
+  ofr.cdrawString(text.c_str(), tft.width() - 43, 200);
+}
 
 void drawProgress(const char *text, int8_t percentage) {
   ofr.setFontSize(24);
@@ -108,6 +188,10 @@ void drawProgress(const char *text, int8_t percentage) {
   ui.drawProgressBar(pbX, pbY, pbWidth, 15, percentage, TFT_WHITE, TFT_TP_BLUE);
 }
 
+void drawSeparator(uint16_t y) {
+  tft.drawFastHLine(10, y, tft.width() - 2 * 15, 0x4228);
+}
+
 void drawTime() {
   timeSprite.fillSprite(TFT_BLACK);
   ofr.setFontSize(48);
@@ -116,6 +200,41 @@ void drawTime() {
   timeSprite.pushSprite(timeSpritePos.x, timeSpritePos.y);
   // set the drawer back since we temporarily changed it to the time sprite above
   ofr.setDrawer(tft);
+}
+
+String getWeatherIconName(uint16_t id, bool today) {
+  // Weather condition codes: https://openweathermap.org/weather-conditions#Weather-Condition-Codes-2
+
+  // For the 8xx group we also have night versions of the icons.
+  // Switch to night icons? This could be written w/o if-else but it'd be less legible.
+  if ( today && id/100 == 8) {
+    if (today && (currentWeather.observationTime < currentWeather.sunrise ||
+                  currentWeather.observationTime > currentWeather.sunset)) {
+      id += 1000;
+    } else if(!today && false) {
+      //forecast->dt[0] < forecast->sunrise || forecast->dt[0] > forecast->sunset
+      id += 1000;
+    }
+  }
+
+  if (id/100 == 2) return "thunderstorm";
+  if (id/100 == 3) return "drizzle";
+  if (id == 500) return "light-rain";
+  if (id == 504) return "extrem-rain";
+  else if (id == 511) return "sleet";
+  else if (id/100 == 5) return "rain";
+  if (id >= 611 && id <= 616) return "sleet";
+  else if (id/100 == 6) return "snow";
+  if (id/100 == 7) return "fog";
+  if (id == 800) return "clear-day";
+  if (id == 801) return "partly-cloudy-day";
+  else if (id/100 == 8) return "cloudy";
+  // night icons
+  if (id == 1800) return "clear-night";
+  if (id == 1801) return "partly-cloudy-night";
+  else if (id/100 == 18) return "cloudy";
+
+  return "unknown";
 }
 
 void initJpegDecoder() {
@@ -181,6 +300,13 @@ void update() {
   ofr.setFontSize(16);
   ofr.cdrawString(String("Last weather update: " + getCurrentTimestamp(UI_TIME_FORMAT_NO_SECONDS)).c_str(), tft.width() / 2, 10);
   drawTime();
+  drawSeparator(90);
+
+  drawCurrentWeather();
+  drawSeparator(230);
+
+  drawSeparator(350);
+  drawAstro();
 }
 
 void updateData(boolean updateProgressBar) {
@@ -191,7 +317,7 @@ void updateData(boolean updateProgressBar) {
   currentWeatherClient->updateCurrentById(&currentWeather, OPEN_WEATHER_MAP_API_KEY, OPEN_WEATHER_MAP_LOCATION_ID);
   delete currentWeatherClient;
   currentWeatherClient = nullptr;
-  log_i("Current weather in %s: %s, %.1fC°", currentWeather.cityName, currentWeather.description.c_str(), currentWeather.feelsLike);
+  log_i("Current weather in %s: %s, %.1f°", currentWeather.cityName, currentWeather.description.c_str(), currentWeather.feelsLike);
 
   if(updateProgressBar) drawProgress("Updating forecast...", 90);
   OpenWeatherMapForecast *forecastClient = new OpenWeatherMapForecast();
