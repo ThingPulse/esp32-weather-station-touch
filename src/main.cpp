@@ -39,7 +39,7 @@ unsigned long lastUpdateMillis = 0;
 const int16_t centerWidth = tft.width() / 2;
 
 OpenWeatherMapCurrentData currentWeather;
-OpenWeatherMapForecastData forecasts[MAX_FORECASTS];
+OpenWeatherMapForecastData forecasts[NUMBER_OF_FORECASTS];
 
 
 
@@ -48,6 +48,7 @@ OpenWeatherMapForecastData forecasts[MAX_FORECASTS];
 // ----------------------------------------------------------------------------
 void drawAstro();
 void drawCurrentWeather();
+void drawForecast();
 void drawProgress(const char *text, int8_t percentage);
 void drawTimeAndDate();
 String getWeatherIconName(uint16_t id, bool today);
@@ -146,7 +147,7 @@ void drawCurrentWeather() {
 
   // condition string
   ofr.setFontSize(24);
-  ofr.cdrawString(currentWeather.main.c_str(), centerWidth, 95);
+  ofr.cdrawString(currentWeather.description.c_str(), centerWidth, 95);
 
   // temperature incl. symbol, slightly shifted to the right to find better balance due to the ° symbol
   ofr.setFontSize(48);
@@ -174,6 +175,25 @@ void drawCurrentWeather() {
   if (IS_METRIC) text += " m/s";
   else text += " mph";
   ofr.cdrawString(text.c_str(), tft.width() - 43, 200);
+}
+
+void drawForecast() {
+  DayForecast* dayForecasts = calculateDayForecasts(forecasts);
+  for (int i = 0; i < NUMBER_OF_DAY_FORECASTS; i++) {
+    log_i("[%d] condition code: %d, hour: %d, temp: %.1f/%.1f", dayForecasts[i].day,
+          dayForecasts[i].conditionCode, dayForecasts[i].conditionHour, dayForecasts[i].minTemp,
+          dayForecasts[i].maxTemp);
+  }
+
+  int widthEigth = tft.width() / 8;
+  for (int i = 0; i < NUMBER_OF_DAY_FORECASTS; i++) {
+    int x = widthEigth * ((i * 2) + 1);
+    ofr.setFontSize(24);
+    ofr.cdrawString(WEEKDAYS_ABBR[dayForecasts[i].day].c_str(), x, 235);
+    ofr.setFontSize(18);
+    ofr.cdrawString(String(String(dayForecasts[i].minTemp, 0) + "-" + String(dayForecasts[i].maxTemp, 0) + "°").c_str(), x, 265);
+    ui.drawBmp("/weather-small/" + getWeatherIconName(dayForecasts[i].conditionCode, false) + ".bmp", x - 25, 295);
+  }
 }
 
 void drawProgress(const char *text, int8_t percentage) {
@@ -207,7 +227,7 @@ void drawTimeAndDate() {
   // Time
   ofr.setFontSize(48);
   // centering that string would look optically odd for 12h times -> manage pos manually
-  ofr.drawString(getCurrentTimestamp(UI_TIME_FORMAT).c_str(), timePosX, 30);
+  ofr.drawString(getCurrentTimestamp(UI_TIME_FORMAT).c_str(), timePosX, 25);
   timeSprite.pushSprite(timeSpritePos.x, timeSpritePos.y);
 
   // set the drawer back since we temporarily changed it to the time sprite above
@@ -239,7 +259,7 @@ String getWeatherIconName(uint16_t id, bool today) {
   else if (id/100 == 6) return "snow";
   if (id/100 == 7) return "fog";
   if (id == 800) return "clear-day";
-  if (id == 801) return "partly-cloudy-day";
+  if (id >= 801 && id <= 803) return "partly-cloudy-day";
   else if (id/100 == 8) return "cloudy";
   // night icons
   if (id == 1800) return "clear-night";
@@ -315,7 +335,9 @@ void update() {
   drawCurrentWeather();
   drawSeparator(230);
 
-  drawSeparator(350);
+  drawForecast();
+  drawSeparator(355);
+
   drawAstro();
 }
 
@@ -333,9 +355,8 @@ void updateData(boolean updateProgressBar) {
   OpenWeatherMapForecast *forecastClient = new OpenWeatherMapForecast();
   forecastClient->setMetric(IS_METRIC);
   forecastClient->setLanguage(OPEN_WEATHER_MAP_LANGUAGE);
-  uint8_t allowedHours[] = {12, 0};
-  forecastClient->setAllowedHours(allowedHours, sizeof(allowedHours));
-  forecastClient->updateForecastsById(forecasts, OPEN_WEATHER_MAP_API_KEY, OPEN_WEATHER_MAP_LOCATION_ID, MAX_FORECASTS);
+  forecastClient->setAllowedHours(forecastHoursUtc, sizeof(forecastHoursUtc));
+  forecastClient->updateForecastsById(forecasts, OPEN_WEATHER_MAP_API_KEY, OPEN_WEATHER_MAP_LOCATION_ID, NUMBER_OF_FORECASTS);
   delete forecastClient;
   forecastClient = nullptr;
 }

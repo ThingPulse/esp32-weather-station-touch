@@ -8,6 +8,56 @@
 
 char timestampBuffer[26];
 
+uint8_t getCurrentWeekday();
+
+/**
+ * Use the 3h/5d OWM forecast data to condense it into minimal daily forecasts (as required by this app).
+ * Algo:
+ * - iterate over all OWM forecasts
+ * - skip the ones from the current day
+ * - find min/max temp for each day by comparing the temp from the current 3h forecast against the min/max found so far
+ * - use the condition code (i.e. the weather) of the one 3h forecast closest to 12 moon
+ *
+ * @param forecasts NUMBER_OF_DAY_FORECASTS 3h/5d OWM forecast containers
+ * @return DayForecast* array of NUMBER_OF_DAY_FORECASTS minimal daily forecast containers
+ */
+DayForecast* calculateDayForecasts(OpenWeatherMapForecastData *forecasts) {
+  uint8_t weekday = getCurrentWeekday();
+  static DayForecast dayForecasts[NUMBER_OF_DAY_FORECASTS];
+  for (int i = 0; i < NUMBER_OF_DAY_FORECASTS; i++) {
+    dayForecasts[i] = {200.0, -200.0, 0, 23};
+  }
+  int k = -1;
+  int currentForecastDay = -1;
+
+  for (uint8_t i = 0; i < NUMBER_OF_FORECASTS; i++) {
+    OpenWeatherMapForecastData forecast = forecasts[i];
+    time_t forecastTimeUtc = forecast.observationTime;
+    struct tm *forecastLocalTime = localtime(&forecastTimeUtc);
+
+    if (weekday == forecastLocalTime->tm_wday) {
+      strftime(timestampBuffer, sizeof(timestampBuffer), SYSTEM_TIMESTAMP_FORMAT, forecastLocalTime);
+      log_d("Skipping forecast for today %s", timestampBuffer);
+      continue;
+    }
+
+    if (forecastLocalTime->tm_wday != currentForecastDay) {
+      currentForecastDay = forecastLocalTime->tm_wday;
+      k++;
+      dayForecasts[k].day = currentForecastDay;
+    }
+    log_d("Current forecast day: %d, array index: %d, hour: %d, temp: %.1f", currentForecastDay, k, forecastLocalTime->tm_hour, forecast.temp);
+    if (forecast.temp < dayForecasts[k].minTemp) dayForecasts[k].minTemp = forecast.temp;
+    if (forecast.temp > dayForecasts[k].maxTemp) dayForecasts[k].maxTemp = forecast.temp;
+    // find the condition closest to 12 noon (tm_hour is 0-23)
+    if (abs(12 - forecastLocalTime->tm_hour) < abs(12 - dayForecasts[k].conditionHour)) {
+      dayForecasts[k].conditionCode = forecast.weatherId;
+      dayForecasts[k].conditionHour = forecastLocalTime->tm_hour;
+    }
+  }
+  return dayForecasts;
+}
+
 uint8_t getCurrentWeekday() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {

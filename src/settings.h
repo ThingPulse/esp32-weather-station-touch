@@ -44,6 +44,7 @@ const String DISPLAYED_LOCATION_NAME = "Zurich";
 const String OPEN_WEATHER_MAP_LANGUAGE = "en";
 
 const String WEEKDAYS[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+const String WEEKDAYS_ABBR[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
 
 const String SUN_MOON_LABEL[] = {"Sun", "Moon"};
 const String MOON_PHASES[] = {"New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
@@ -60,6 +61,14 @@ typedef struct RectangleDef {
   uint16_t width;
   uint16_t height;
 } RectangleDef;
+
+typedef struct DayForecast {
+  float minTemp;
+  float maxTemp;
+  int conditionCode;
+  int conditionHour;
+  int day;
+} DayForecast;
 
 RectangleDef timeSpritePos = {0, 0, 320, 88};
 
@@ -103,7 +112,11 @@ const uint8_t NUMBER_OF_MOON_IMAGES = 32;
 
 #define SYSTEM_TIMESTAMP_FORMAT "%Y-%m-%d %H:%M:%S"
 
-#define MAX_FORECASTS 12
+// every 3h (UTC), we need all to be able to calculate daily min/max temperatures
+const uint8_t forecastHoursUtc[] = {0, 3, 6, 9, 12, 15, 18, 21};
+// 5 day / 3 hour forecast data => 8 forecasts/day => 40 total
+#define NUMBER_OF_FORECASTS 40
+#define NUMBER_OF_DAY_FORECASTS 4
 
 #define APP_NAME "ESP32 Weather Station Touch"
 #define VERSION "1.0.0"
