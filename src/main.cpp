@@ -244,7 +244,10 @@ String getWeatherIconName(uint16_t id, bool today) {
                   currentWeather.observationTime > currentWeather.sunset)) {
       id += 1000;
     } else if(!today && false) {
-      //forecast->dt[0] < forecast->sunrise || forecast->dt[0] > forecast->sunset
+      // NOT-SUPPORTED-YET
+      // We currently don't need the night icons for forecast.
+      // Hence, we don't even track those properties in the DayForecast struct.
+      // forecast->dt[0] < forecast->sunrise || forecast->dt[0] > forecast->sunset
       id += 1000;
     }
   }
