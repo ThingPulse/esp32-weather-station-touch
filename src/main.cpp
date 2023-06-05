@@ -56,7 +56,7 @@ void initJpegDecoder();
 void initOpenFontRender();
 bool pushImageToTft(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap);
 void syncTime();
-void update();
+void repaint();
 void updateData(boolean updateProgressBar);
 
 
@@ -88,7 +88,7 @@ void loop(void) {
   if (lastTimeSyncMillis == 0 ||
       lastUpdateMillis == 0 ||
       (millis() - lastUpdateMillis) > updateIntervalMillis) {
-    update();
+    repaint();
   } else {
     drawTimeAndDate();
   }
@@ -306,7 +306,7 @@ void syncTime() {
   }
 }
 
-void update() {
+void repaint() {
   tft.fillScreen(TFT_BLACK);
   ui.drawLogo();
 
