@@ -4,7 +4,7 @@
 
 Weather station application for the [ThingPulse Color Kit Grande](https://thingpulse.com/product/esp32-wifi-color-display-kit-grande/).
 
-[![ThingPulse ESP32 ThingPulse Color Kit Grande](https://thingpulse.com/wp-content/uploads/2022/10/thingpulse-color-kit-grande.png)](https://thingpulse.com/product/esp32-wifi-color-display-kit-grande/)
+[![Color Kit Grande with sample application: weather station](https://thingpulse.com/wp-content/uploads/2022/10/ThingPulse-Color-Kit-Grand-with-sample-application.jpg)](https://thingpulse.com/product/esp32-wifi-color-display-kit-grande/)
 
 ## How to use it
 
