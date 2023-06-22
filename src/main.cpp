@@ -93,6 +93,17 @@ void loop(void) {
     drawTimeAndDate();
   }
   delay(1000);
+
+  // if (ts.touched()) {
+  //   TS_Point p = ts.getPoint();
+
+  //   uint16_t touchX = p.x;
+  //   uint16_t touchY = p.y;
+
+  //   log_d("Touch coordinates: x=%d, y=%d", touchX, touchY);
+  //   // Debouncing; avoid returning the same touch multiple times.
+  //   delay(50);
+  // }
 }
 
 
