@@ -99,7 +99,7 @@ const uint8_t NUMBER_OF_MOON_IMAGES = 32;
 #ifdef DATE_TIME_FORMAT_US
   int timePosX = 29;
   #define UI_DATE_FORMAT "%m/%d/%Y"
-  #define UI_TIME_FORMAT "%H:%M:%S %P"
+  #define UI_TIME_FORMAT "%I:%M:%S %P"
   #define UI_TIME_FORMAT_NO_SECONDS "%I:%M %P"
   #define UI_TIMESTAMP_FORMAT (UI_DATE_FORMAT + " " + UI_TIME_FORMAT)
 #else
