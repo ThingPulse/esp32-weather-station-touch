@@ -13,6 +13,7 @@
 #include <OpenWeatherMapCurrent.h>
 #include <OpenWeatherMapForecast.h>
 #include <SunMoonCalc.h>
+#include <TaskScheduler.h>
 
 #include "connectivity.h"
 #include "display.h"
@@ -41,6 +42,8 @@ const int16_t centerWidth = tft.width() / 2;
 OpenWeatherMapCurrentData currentWeather;
 OpenWeatherMapForecastData forecasts[NUMBER_OF_FORECASTS];
 
+Scheduler scheduler;
+
 
 
 // ----------------------------------------------------------------------------
@@ -58,6 +61,9 @@ bool pushImageToTft(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitm
 void syncTime();
 void repaint();
 void updateData(boolean updateProgressBar);
+
+
+Task clockTask(1000, TASK_FOREVER, &drawTimeAndDate);
 
 
 
@@ -79,6 +85,10 @@ void setup(void) {
 
   initFileSystem();
   initOpenFontRender();
+
+  scheduler.init();
+  scheduler.addTask(clockTask);
+  clockTask.enable();
 }
 
 void loop(void) {
@@ -89,10 +99,7 @@ void loop(void) {
       lastUpdateMillis == 0 ||
       (millis() - lastUpdateMillis) > updateIntervalMillis) {
     repaint();
-  } else {
-    drawTimeAndDate();
   }
-  delay(1000);
 
   // if (ts.touched()) {
   //   TS_Point p = ts.getPoint();
@@ -104,6 +111,7 @@ void loop(void) {
   //   // Debouncing; avoid returning the same touch multiple times.
   //   delay(50);
   // }
+  scheduler.execute();
 }
 
 
