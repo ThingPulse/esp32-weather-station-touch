@@ -41,6 +41,8 @@ const String DISPLAYED_LOCATION_NAME = "Zurich";
 //String DISPLAYED_LOCATION_NAME = "Anchorage";
 
 // Supported languages: https://openweathermap.org/current#multi
+
+// Language: english
 const String OPEN_WEATHER_MAP_LANGUAGE = "en";
 
 const String WEEKDAYS[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
@@ -49,8 +51,17 @@ const String WEEKDAYS_ABBR[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"}
 const String SUN_MOON_LABEL[] = {"Sun", "Moon"};
 const String MOON_PHASES[] = {"New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
                               "Full Moon", "Waning Gibbous", "Third quarter", "Waning Crescent"};
+/*
+// Language: german
+const String OPEN_WEATHER_MAP_LANGUAGE = "de";
 
+const String WEEKDAYS[] = {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
+const String WEEKDAYS_ABBR[] = {"SO", "MO", "DI", "MI", "DO", "FR", "SA"};
 
+const String SUN_MOON_LABEL[] = {"Sonne", "Mond"};
+const String MOON_PHASES[] = {"Neumond", "zunehmender Sichelmond", "zunehmendes Viertel", "zunehmender Mond",
+                              "Vollmond", "abnehmender Mond", "abnehmendes Viertel", "abnehmender Sichelmond"};
+*/
 
 // ****************************************************************************
 // System settings - do not modify unless you understand what you are doing!
