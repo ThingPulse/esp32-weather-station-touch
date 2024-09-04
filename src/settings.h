@@ -3,9 +3,16 @@
 
 #pragma once
 
+
+
+
 // ****************************************************************************
 // User settings
 // ****************************************************************************
+// language settings are in translations/texts_*.h
+#include "translations/texts_en.h"
+//#include "translations/texts_de.h"
+
 // WiFi
 const char *SSID = "yourssid";
 const char *WIFI_PWD = "yourpassw0rd";
@@ -39,18 +46,6 @@ const String DISPLAYED_LOCATION_NAME = "Zurich";
 //String DISPLAYED_LOCATION_NAME = "Sydney";
 //String OPEN_WEATHER_MAP_LOCATION_ID = "5879400";
 //String DISPLAYED_LOCATION_NAME = "Anchorage";
-
-// Supported languages: https://openweathermap.org/current#multi
-const String OPEN_WEATHER_MAP_LANGUAGE = "en";
-
-const String WEEKDAYS[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-const String WEEKDAYS_ABBR[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
-
-const String SUN_MOON_LABEL[] = {"Sun", "Moon"};
-const String MOON_PHASES[] = {"New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
-                              "Full Moon", "Waning Gibbous", "Third quarter", "Waning Crescent"};
-
-
 
 // ****************************************************************************
 // System settings - do not modify unless you understand what you are doing!
