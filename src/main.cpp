@@ -107,7 +107,7 @@ void loop(void) {
   //   uint16_t touchX = p.x;
   //   uint16_t touchY = p.y;
 
-  //   log_d("Touch coordinates: x=%d, y=%d", touchX, touchY);
+  //   log_i("Touch coordinates: x=%d, y=%d", touchX, touchY);
   //   // Debouncing; avoid returning the same touch multiple times.
   //   delay(50);
   // }
@@ -371,7 +371,7 @@ void updateData(boolean updateProgressBar) {
   currentWeatherClient->updateCurrentById(&currentWeather, OPEN_WEATHER_MAP_API_KEY, OPEN_WEATHER_MAP_LOCATION_ID);
   delete currentWeatherClient;
   currentWeatherClient = nullptr;
-  log_i("Current weather in %s: %s, %.1f°", currentWeather.cityName, currentWeather.description.c_str(), currentWeather.feelsLike);
+  log_i("Current weather in %s: %s, %.1f°", currentWeather.cityName.c_str(), currentWeather.description.c_str(), currentWeather.feelsLike);
 
   if(updateProgressBar) drawProgress("Updating forecast...", 90);
   OpenWeatherMapForecast *forecastClient = new OpenWeatherMapForecast();
